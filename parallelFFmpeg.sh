@@ -1,6 +1,9 @@
 #!/bin/bash
 
+#if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
+
+#for multiple machines this should point to same location (mount point) on network
 OUTPUT_PATH=/tmp/chunks
 mkdir $OUTPUT_PATH
 
@@ -37,30 +40,30 @@ SCOUNT_TOTAL=0
 while [[ $SCOUNT_TOTAL -le $SECS ]];
 do
   TIME=`printf "%02d" $HOS`:`printf "%02d" $MINS`:`printf "%02d" $SCOUNT`
-   
+
   SEGMENT=$FRAG_L
   if [ $LOOP_NO -eq  $NO_OF_SEGMENTS ]
   then
     SEGMENT=$REST
   fi
-  
+
   #echo $TIME $SEGMENT
 
   OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$TIME.mp4
-  
+
   echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -c:a aac -b:a 384k -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
-  
+
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
   SCOUNT=$(( $SCOUNT + $FRAG_L ))
-  
+
   if [ $SCOUNT -ge 59 ]
   then
     SCOUNT=$(( $SCOUNT % 60 ))
     MINS=$(( $MINS + 1 ))
   fi
 
-  
+
   if [ $MINS -ge 59 ]
   then
     MINS=0
