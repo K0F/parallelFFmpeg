@@ -15,6 +15,7 @@ FRAG=$(echo $DURATION | awk -F'.' '{print $2}')
 #compute number of chunks segemnts
 NO_OF_SEGMENTS=$(($SECS/$FRAG_L))
 echo total duration "$SECS.$FRAG"s
+echo segment length "$FRAG_L"s
 echo number of segments $NO_OF_SEGMENTS
 
 #set the length of the last one
@@ -31,10 +32,11 @@ echo "" > /tmp/files
 
 SCOUNT=0
 LOOP_NO=0
+SCOUNT_TOTAL=0
 
-while [[ $SCOUNT -le $SECS ]];
+while [[ $SCOUNT_TOTAL -le $SECS ]];
 do
-  TIME=`printf "%02d" $HOS`:`printf "%02d" $MINS`:00
+  TIME=`printf "%02d" $HOS`:`printf "%02d" $MINS`:`printf "%02d" $SCOUNT`
    
   SEGMENT=$FRAG_L
   if [ $LOOP_NO -eq  $NO_OF_SEGMENTS ]
@@ -50,10 +52,11 @@ do
   echo file $OUTPUT >> /tmp/files
   
   SCOUNT=$(( $SCOUNT + $FRAG_L ))
+  SCOUNT_TOTAL=$(($SCOUNT_TOTAL+$SCOUNT))
   
   if [ $SCOUNT -ge 59 ]
   then
-    SCOUNT=$(( 60 - $FRAG_L ));
+    SCOUNT=$((60-$FRAG_L));
     MINS=$(( $MINS + 1 ))
   fi
 
