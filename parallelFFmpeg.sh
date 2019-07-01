@@ -5,10 +5,17 @@ INPUT="$1"
 
 #for multiple machines this should point to same location (mount point) on network
 OUTPUT_PATH=/tmp/chunks
-mkdir $OUTPUT_PATH
+
+if [ -d "$DIRECTORY" ]; then
+  echo Creating temp directory
+  mkdir $OUTPUT_PATH
+else
+  echo Cleaning temp directory
+  rm -rf $OUTPUT_PATH/*
+fi
 
 # length of segment (in seconds)
-FRAG_L=10
+FRAG_L=15
 
 #get duration of input file and parse decimals
 DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$INPUT");
@@ -17,9 +24,9 @@ FRAG=$(echo $DURATION | awk -F'.' '{print $2}')
 
 #compute number of chunks segemnts
 NO_OF_SEGMENTS=$(($SECS/$FRAG_L))
-echo total duration "$SECS.$FRAG"s
-echo segment length "$FRAG_L"s
-echo number of segments $NO_OF_SEGMENTS
+echo Total duration: "$SECS.$FRAG"s
+echo Segment length: "$FRAG_L"s
+echo Number of segments: $NO_OF_SEGMENTS
 
 #set the length of the last one
 REST=$(( $SECS % $FRAG_L )).$FRAG
@@ -29,7 +36,6 @@ MINS=0
 HOS=0
 
 #
-rm -rf $OUTPUT_PATH/*
 echo "" > /tmp/jobs
 echo "" > /tmp/files
 
