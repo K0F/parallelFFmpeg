@@ -5,5 +5,5 @@ script to chunk and parallelize many ffmpeg instances over single video conversi
 
 ## dependencies
 
-  ffmpeg
-  gnu parallel
+  - ffmpeg (on ecah node)
+  - gnu parallel (on each node)
