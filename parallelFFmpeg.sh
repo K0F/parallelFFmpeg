@@ -6,16 +6,16 @@ INPUT="$1"
 #for multiple machines this should point to same location (mount point) on network
 OUTPUT_PATH=/tmp/chunks
 
-if [ -d "$DIRECTORY" ]; then
-  echo Creating temp directory
-  mkdir $OUTPUT_PATH
-else
+if [ -d "$OUTPUT_PATH" ]; then
   echo Cleaning temp directory
   rm -rf $OUTPUT_PATH/*
+else
+  echo Creating temp directory
+  mkdir $OUTPUT_PATH
 fi
 
 # length of segment (in seconds)
-FRAG_L=15
+FRAG_L=30
 
 #get duration of input file and parse decimals
 DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$INPUT");
@@ -57,7 +57,7 @@ do
 
   OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$TIME.mp4
 
-  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -c:a aac -b:a 384k -y $OUTPUT" >> /tmp/jobs
+  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264 -pix_fmt yuv420p -crf 16 -preset ultrafast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
 
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
@@ -81,3 +81,5 @@ done
 parallel --eta --progress -S "8/:" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 ffmpeg -f concat -safe 0 -i /tmp/files -c:v copy -c:a copy -y $FIN
+echo Src length: "$DURATION"s
+echo Fin length: $(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$FIN")s
