@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
+SERVERS="16/:"
+
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
 
@@ -63,22 +66,24 @@ do
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
   SCOUNT=$(( $SCOUNT + $FRAG_L ))
 
-  if [ $SCOUNT -ge 59 ]
+  if [ $SCOUNT -gt 59 ]
   then
     SCOUNT=$(( $SCOUNT % 60 ))
     MINS=$(( $MINS + 1 ))
   fi
 
-
-  if [ $MINS -ge 59 ]
+  if [ $MINS -gt 59 ]
   then
     MINS=0
     HOS=$(( $HOS + 1 ))
   fi
+
+
+
   LOOP_NO=$(( $LOOP_NO + 1 ))
 done
 
-parallel --eta --progress -S "8/:" < /tmp/jobs
+parallel --eta --progress -S "$SERVERS" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 ffmpeg -f concat -safe 0 -i /tmp/files -c:v copy -c:a copy -y $FIN
 echo Src length: "$DURATION"s
