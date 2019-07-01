@@ -5,7 +5,7 @@ OUTPUT_PATH=/tmp/chunks
 mkdir $OUTPUT_PATH
 
 # length of segment (in seconds)
-FRAG_L=30
+FRAG_L=10
 
 #get duration of input file and parse decimals
 DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$INPUT");
@@ -51,12 +51,12 @@ do
   echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -c:a aac -b:a 384k -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
   
+  SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
   SCOUNT=$(( $SCOUNT + $FRAG_L ))
-  SCOUNT_TOTAL=$(($SCOUNT_TOTAL+$SCOUNT))
   
   if [ $SCOUNT -ge 59 ]
   then
-    SCOUNT=$((60-$FRAG_L));
+    SCOUNT=$(( $SCOUNT % 60 ))
     MINS=$(( $MINS + 1 ))
   fi
 
