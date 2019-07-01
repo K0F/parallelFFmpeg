@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-SERVERS="16/:"
+SERVERS="4/:,16/nfaProjekce,16/nfaDTL01"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
 
 #for multiple machines this should point to same location (mount point) on network
-OUTPUT_PATH=/tmp/chunks
+OUTPUT_PATH=/mnt/central/TEMP_KRYSTOF/chunks
 
 if [ -d "$OUTPUT_PATH" ]; then
   echo Cleaning temp directory
@@ -39,8 +39,8 @@ MINS=0
 HOS=0
 
 #
-echo "" > /tmp/jobs
-echo "" > /tmp/files
+rm /tmp/jobs
+rm /tmp/files
 
 SCOUNT=0
 LOOP_NO=0
@@ -58,9 +58,9 @@ do
 
   #echo $TIME $SEGMENT
 
-  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$TIME.mp4
+  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').mp4
 
-  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264 -pix_fmt yuv420p -crf 16 -preset ultrafast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
+  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264 -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
 
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
@@ -85,6 +85,13 @@ done
 
 parallel --eta --progress -S "$SERVERS" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
+
+# concat using ffmpeg
 ffmpeg -f concat -safe 0 -i /tmp/files -c:v copy -c:a copy -y $FIN
+
+#concat using mp4box (not working)
+COUNT=0
+#echo MP4Box $(while read i ; do if [ $COUNT -eq 0 ]; then printf "-add $i "; else printf "-cat $i "; fi ; COUNT=$(( $COUNT + 1 )); done < /tmp/files) -new "$FIN".mp4 | bash
+
 echo Src length: "$DURATION"s
 echo Fin length: $(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$FIN")s
