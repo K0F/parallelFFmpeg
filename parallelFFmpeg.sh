@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-SERVERS="8/nfaProjekce,8/nfaDTL01"
+SERVERS="8/nfaProjekce,8/nfaDTL01,1/:,1/nfaAdela"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
@@ -91,17 +91,13 @@ do
   LOOP_NO=$(( $LOOP_NO + 1 ))
 done
 
-parallel --bar --progress -S "$SERVERS" < /tmp/jobs
+parallel --progress --eta -S "$SERVERS" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 
 # concat using ffmpeg
-ffmpeg -f concat -safe 0 -hwaccel cuvid -c:v h264_cuvid -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -y $FIN
-
-#concat using mp4box (not working [produces corrupted file])
-#CNT=0
-#echo MP4Box $(while read i ; do if [ $CNT -eq 0 ]; then printf "-add $i "; else printf "-cat $i "; fi ; CNT=$(( $CNT + 1 )); done < /tmp/files) -new "$FIN".mp4 > /tmp/merge
-#chmod a+x /tmp/merge
-#bash /tmp/merge
+clear
+echo Concating segemnts
+ffmpeg -f concat -safe 0 -hwaccel auto -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -y $FIN
 
 echo Src length: "$DURATION"s
 echo Fin length: $(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$FIN")s
