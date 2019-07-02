@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-SERVERS="2/:,2/nfaAdela,8/nfaProjekce,8/nfaDTL01"
+SERVERS="8/nfaProjekce,8/nfaDTL01"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
@@ -18,7 +18,7 @@ else
 fi
 
 # length of segment (in seconds)
-FRAG_L=30
+FRAG_L=15
 
 #get duration of input file and parse decimals
 DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$INPUT");
@@ -58,9 +58,9 @@ do
 
   #echo $TIME $SEGMENT
 
-  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').mp4
+  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').ts
 
-  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
+  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -preset llhq -profile high -c:a aac -strict -2 -ac 2 -bsf:v h264_mp4toannexb -f mpegts -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
 
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
@@ -87,7 +87,7 @@ parallel --eta --progress -S "$SERVERS" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 
 # concat using ffmpeg
-ffmpeg -f concat -safe 0 -i /tmp/files -c:v copy -c:a copy -y $FIN
+ffmpeg -hwaccel nvdec -f concat -safe 0 -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -y $FIN
 
 #concat using mp4box (not working [produces corrupted file])
 #CNT=0
