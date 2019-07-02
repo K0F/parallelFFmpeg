@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-SERVERS="4/:,16/nfaProjekce,16/nfaDTL01"
+SERVERS="2/:,2/nfaAdela,8/nfaProjekce,8/nfaDTL01"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
@@ -60,7 +60,7 @@ do
 
   OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').mp4
 
-  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264 -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
+  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -ac 2 -y $OUTPUT" >> /tmp/jobs
   echo file $OUTPUT >> /tmp/files
 
   SCOUNT_TOTAL=$(( $SCOUNT_TOTAL + $FRAG_L ))
@@ -89,9 +89,11 @@ FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 # concat using ffmpeg
 ffmpeg -f concat -safe 0 -i /tmp/files -c:v copy -c:a copy -y $FIN
 
-#concat using mp4box (not working)
-COUNT=0
-#echo MP4Box $(while read i ; do if [ $COUNT -eq 0 ]; then printf "-add $i "; else printf "-cat $i "; fi ; COUNT=$(( $COUNT + 1 )); done < /tmp/files) -new "$FIN".mp4 | bash
+#concat using mp4box (not working [produces corrupted file])
+#CNT=0
+#echo MP4Box $(while read i ; do if [ $CNT -eq 0 ]; then printf "-add $i "; else printf "-cat $i "; fi ; CNT=$(( $CNT + 1 )); done < /tmp/files) -new "$FIN".mp4 > /tmp/merge
+#chmod a+x /tmp/merge
+#bash /tmp/merge
 
 echo Src length: "$DURATION"s
 echo Fin length: $(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$FIN")s
