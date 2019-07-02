@@ -25,8 +25,16 @@ DURATION=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -o
 SECS=$(echo $DURATION | awk -F'.' '{print $1}')
 FRAG=$(echo $DURATION | awk -F'.' '{print $2}')
 
+# Floor function
+Floor () {
+  DIVIDEND=${1}
+  DIVISOR=${2}
+  RESULT=$(( ( ${DIVIDEND} - ( ${DIVIDEND} % ${DIVISOR}) )/${DIVISOR} ))
+  echo ${RESULT}
+}
+
 #compute number of chunks segemnts
-NO_OF_SEGMENTS=$(($SECS/$FRAG_L))
+NO_OF_SEGMENTS=$( Floor $SECS $FRAG_L )
 echo Total duration: "$SECS.$FRAG"s
 echo Segment length: "$FRAG_L"s
 echo Number of segments: $NO_OF_SEGMENTS
@@ -83,11 +91,11 @@ do
   LOOP_NO=$(( $LOOP_NO + 1 ))
 done
 
-parallel --eta --progress -S "$SERVERS" < /tmp/jobs
+parallel --bar --progress -S "$SERVERS" < /tmp/jobs
 FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
 
 # concat using ffmpeg
-ffmpeg -hwaccel nvdec -f concat -safe 0 -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -y $FIN
+ffmpeg -f concat -safe 0 -hwaccel cuvid -c:v h264_cuvid -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -y $FIN
 
 #concat using mp4box (not working [produces corrupted file])
 #CNT=0
