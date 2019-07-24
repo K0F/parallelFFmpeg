@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-SERVERS="8/nfaProjekce,8/nfaDTL01,2/:,2/nfaAdela"
+SERVERS="8/nfaProjekce,2/:,2/nfaAdela"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
@@ -75,9 +75,12 @@ do
 
   #echo $TIME $SEGMENT
 
-  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').ts
+  OUTPUT=$OUTPUT_PATH/$(echo `basename $INPUT` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').webm
 
-  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -strict -2 -ac 2 -bsf:v h264_mp4toannexb -f mpegts -y $OUTPUT" >> /tmp/jobs
+  #echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v h264_nvenc -pix_fmt yuv420p -qp 16 -preset fast -c:a aac -strict -2 -ac 2 -bsf:v h264_mp4toannexb -f mpegts -y $OUTPUT" >> /tmp/jobs
+
+  echo "ffmpeg -loglevel panic -ss $TIME -i $INPUT -t $SEGMENT -c:v libvpx-vp9 -pix_fmt yuv420p -crf 23 -b:v 0 -c:a opus -b:a 128k -strict -2 -ac 2 -y $OUTPUT" >> /tmp/jobs
+
   echo file $OUTPUT >> /tmp/files
   echo $OUTPUT >> /tmp/files2
   #echo cat "$OUTPUT >> $OUTPUT_PATH/dump.ts" >> /tmp/jobs2
@@ -103,20 +106,21 @@ do
 done
 
 parallel --progress --eta --halt 'now,fail=1' -S "$SERVERS" < /tmp/jobs || exit 1
-FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".mp4
+FIN="$(echo `basename $INPUT` | awk -F'.' '{print $1}')".webm
 
 #sudo mount -t tmpfs -o size=16G tmpfs /mnt/tmpfs
 #OUTPUT_PATH=/mnt/tmpfs
-if [ -f $OUTPUT_PATH/dump.ts ]; then
-  rm $OUTPUT_PATH/dump.ts
-fi
+#if [ -f $OUTPUT_PATH/dump.ts ]; then
+#  rm $OUTPUT_PATH/dump.ts
+#fi
 
 # concat using ffmpeg
-echo Concating $LOOP_NO segments
-while read file; do echo `du -h $file` ; cat $file >> $OUTPUT_PATH/dump.ts ; done < /tmp/files2
-echo Stitching $LOOP_NO segments
-ffmpeg -i $OUTPUT_PATH/dump.ts -c:a copy -c:v copy -absf aac_adtstoasc -flags global_header -t $DURATION  -movflags +faststart -y $FIN
-#ffmpeg -f concat -safe 0 -hwaccel nvdec -i /tmp/files -c:a copy -c:v copy -bsf:a aac_adtstoasc -flags global_header -movflags +faststart -y $FIN
+#echo Concating $LOOP_NO segments
+#while read file; do echo `du -h $file` ; cat $file >> $OUTPUT_PATH/dump.ts ; done < /tmp/files2
+#echo Stitching $LOOP_NO segments
+#ffmpeg -i $OUTPUT_PATH/dump.ts -c:a copy -c:v copy -absf aac_adtstoasc -flags global_header -t $DURATION  -movflags +faststart -y $FIN
+
+ffmpeg -f concat -safe 0 -hwaccel auto -i /tmp/files -c:a copy -c:v copy -flags global_header -movflags +faststart -y $FIN
 
 echo Src length: "$DURATION"s
 echo Fin length: $(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$FIN")s
