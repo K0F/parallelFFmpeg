@@ -1,17 +1,16 @@
 #!/bin/bash
 
 #names of server machines (see ssh config file / gnu parrallel man pages for more) each node has to have gnu parallel and ffmpeg installed
-#SERVERS="2/:,2/nfaAdela,8/nfaDTL01,8/nfaProjekce"
-SERVERS="4/:,4/mothership"
+SERVERS="2/:,2/nfaAdela,8/nfaDTL01,8/nfaProjekce"
 
 #if using multiple machines the path sould point to the same file (same mount point) in network shared folder
 INPUT="$1"
 
 #for multiple machines this should point to same location (mount point) on network
-OUTPUT_PATH=/home/kof/chunks
+OUTPUT_PATH=/mnt/central/TEMP_KRYSTOF/chunks
 
 #for multiple machines this should point to the same location on each machine (system vars?)
-FONTDIR=/home/kof/.fonts
+FONTDIR=/mnt/central/TEMP_KRYSTOF
 
 # clean auxiliary directory
 if [ -d "$OUTPUT_PATH" ]; then
@@ -89,7 +88,7 @@ do
 
   OUTPUT=$OUTPUT_PATH/$(echo `basename "$INPUT"` | awk -F'.' '{print $1}')_$(echo $TIME | tr ':' '_').ts
 
-  echo "ffmpeg -loglevel panic -hwaccel auto -vaapi_device  /dev/dri/renderD128 -ss $TIME -i "$INPUT" -t $SEGMENT -filter_complex \"setdar=dar=(w/h),setsar=sar=1/1,scale=-2:$HEIGHT,drawtext=fontfile=$FONTDIR/Monaco_Linux.ttf:y=9:x=(w-tw)/2:fontcolor=white:alpha=0.75:shadowcolor=black:shadowx=1:shadowy=1:fontsize=9:r=$FRAMERATE:timecode=\'$TIME:00\',drawtext=fontfile=$FONTDIR/Executive-Regular.otf:x=(main_w)-(text_w)-36:y=main_h-48:fontcolor=white:fontsize=$SIZ*1.3334:text='NFA',format=nv12,hwupload\" -c:v h264_vaapi -qp $CRF -pix_fmt yuv420p -preset fast -c:a aac -bsf:v h264_mp4toannexb -color_primaries bt709 -color_trc bt709 -colorspace bt709 -f mpegts -y \"$OUTPUT\"" >> /tmp/jobs
+  echo "ffmpeg -hide_banner -loglevel panic -hwaccel auto -ss $TIME -i "$INPUT" -t $SEGMENT -filter_complex \"scale=trunc($HEIGHT/ih*iw*sar/2)*2:$HEIGHT,setsar=sar=1,drawtext=fontfile=$FONTDIR/Monaco_Linux.ttf:y=18:x=(w-tw)/2:fontcolor=white:alpha=1:shadowcolor=black:shadowx=1:shadowy=1:fontsize=9:r=$FRAMERATE:timecode=\'$TIME:00\',drawtext=fontfile=$FONTDIR/Executive-Bold.otf:x=(main_w)-(text_w)-36:y=main_h-48:fontcolor=white:fontsize=$SIZ*1.3334:text='NFA'\" -c:v h264_nvenc -qp $CRF -pix_fmt yuv420p -preset llhq -c:a aac -bsf:v h264_mp4toannexb -color_primaries bt709 -color_trc bt709 -colorspace bt709 -f mpegts -y \"$OUTPUT\"" >> /tmp/jobs
   
   #echo cat "$OUTPUT >> $OUTPUT_PATH/dump.ts" >> /tmp/jobs2
   
